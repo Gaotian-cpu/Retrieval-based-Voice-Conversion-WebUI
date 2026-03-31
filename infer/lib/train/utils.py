@@ -316,10 +316,13 @@ def get_hparams(init=True):
         required=True,
         help="if caching the dataset in GPU memory, 1 or 0",
     )
+    # GHB 增加生产目录和最终模型保存目录参数
+    parser.add_argument("-log_root", "--log_root", type=str, default="./logs", help="custom log root directory")
+    parser.add_argument("-save_dir", "--save_dir", type=str, default="assets/weights", help="custom model save directory")
 
     args = parser.parse_args()
     name = args.experiment_dir
-    experiment_dir = os.path.join("./logs", args.experiment_dir)
+    experiment_dir = os.path.join(args.log_root, args.experiment_dir)
 
     config_save_path = os.path.join(experiment_dir, "config.json")
     with open(config_save_path, "r") as f:
@@ -341,6 +344,8 @@ def get_hparams(init=True):
     hparams.save_every_weights = args.save_every_weights
     hparams.if_cache_data_in_gpu = args.if_cache_data_in_gpu
     hparams.data.training_files = "%s/filelist.txt" % experiment_dir
+    hparams.save_dir = args.save_dir
+
     return hparams
 
 

@@ -610,6 +610,7 @@ def train_and_evaluate(
                         epoch,
                         hps.version,
                         hps,
+                        save_dir=hps.save_dir
                     ),
                 )
             )
@@ -627,7 +628,8 @@ def train_and_evaluate(
             "saving final ckpt:%s"
             % (
                 savee(
-                    ckpt, hps.sample_rate, hps.if_f0, hps.name, epoch, hps.version, hps
+                    ckpt, hps.sample_rate, hps.if_f0, hps.name, epoch, hps.version, hps,
+                    save_dir=hps.save_dir
                 )
             )
         )
