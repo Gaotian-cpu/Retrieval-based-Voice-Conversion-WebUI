@@ -20,10 +20,10 @@ else
   if ! command -v python3 >/dev/null 2>&1 || pyenv versions --bare | grep -q "3.10"; then
     echo "Python 3 not found. Attempting to install 3.8..."
     if [ "$(uname)" = "Darwin" ] && command -v brew >/dev/null 2>&1; then
-      brew install python@3.8
+      brew install python@3.10
     elif [ "$(uname)" = "Linux" ] && command -v apt-get >/dev/null 2>&1; then
       sudo apt-get update
-      sudo apt-get install python3
+      sudo apt-get install python3.10
     else
       echo "Please install Python 3.10 manually."
       exit 1
