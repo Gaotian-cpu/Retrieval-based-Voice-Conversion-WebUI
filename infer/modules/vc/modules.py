@@ -126,7 +126,13 @@ class VC:
         else:
             self.net_g = self.net_g.float()
 
-        self.pipeline = Pipeline(self.tgt_sr, self.config)
+        # self.pipeline = Pipeline(self.tgt_sr, self.config)
+        try:
+            self.pipeline = Pipeline(self.tgt_sr, self.config)
+            logger.info("Pipeline created successfully")
+        except Exception as e:
+            logger.error(f"Failed to create pipeline: {e}", exc_info=True)
+            self.pipeline = None
         n_spk = self.cpt["config"][-3]
         index = {"value": get_index_path_from_model(sid), "__type__": "update"}
         logger.info("Select index: " + index["value"])
