@@ -24,6 +24,11 @@ import soundfile as sf
 import torch
 import torch.nn.functional as F
 
+# ========== PyTorch 2.6 兼容修复 ==========
+# import torch
+from fairseq.data.dictionary import Dictionary
+torch.serialization.add_safe_globals([Dictionary])
+
 if "privateuseone" not in device:
     device = "cpu"
     if torch.cuda.is_available():
