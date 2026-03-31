@@ -3,6 +3,7 @@ __pycache__
 /TEMP
 *.pyd
 .venv
+.idea/
 /opt
 tools/aria2c/
 tools/flag.txt
