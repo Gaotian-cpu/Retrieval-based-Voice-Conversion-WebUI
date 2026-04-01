@@ -32,7 +32,7 @@ def run_step(script_path, args, step_name):
 
 # ==================== 主流程 ====================
 def main():
-    parser = argparse.ArgumentParser(description="RVC 官方纯净训练脚本（最终无错版）")
+    parser = argparse.ArgumentParser(description="RVC 官方最终完美训练脚本")
 
     parser.add_argument("--exp_name", required=True, type=str)
     parser.add_argument("--dataset_dir", required=True, type=str)
@@ -78,7 +78,7 @@ def main():
     TRAIN_INDEX = os.path.join(RVC_ROOT, "infer/modules/train/train_index.py")
 
     # ==========================
-    # ✅ 这里是最终正确的参数顺序！
+    # ✅ 最终正确：6 个参数！
     # ==========================
     if not args.skip_process:
         run_step(
@@ -88,7 +88,8 @@ def main():
                 sr_num,             # 2
                 args.num_process,   # 3
                 exp_dir,            # 4
-                "False"             # 5
+                "False",            # 5
+                "0.99",             # 6  <-- 缺失的最后一个参数
             ],
             "数据预处理（切片/重采样/归一化）"
         )
