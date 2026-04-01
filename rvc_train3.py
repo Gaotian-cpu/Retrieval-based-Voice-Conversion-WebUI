@@ -195,7 +195,8 @@ def main():
                 )
         logger.info("✅ 生成训练配置 config.json 成功\n")
     except Exception as e:
-        logger.error(f"❌ 生成config.json失败：{e}")
+        logger.exception(u'❌ 生成config.json失败', e)
+        # logger.error(f"❌ 生成config.json失败：{e}")
         sys.exit(1)
     ###########################################################################
 
