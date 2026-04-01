@@ -4,6 +4,13 @@ import argparse
 import subprocess
 import logging
 
+# ==================== 【关键】屏蔽 NNPACK 警告（和 WebUI 一样）====================
+import warnings
+warnings.filterwarnings("ignore")
+os.environ["PYTORCH_DISABLE_NNPACK"] = "1"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+# ================================================================================
+
 # ==================== 日志配置 ====================
 logging.basicConfig(
     format="%(asctime)s | %(levelname)-5s | %(message)s",
@@ -71,7 +78,7 @@ def main():
     logger.info(f"📂 模型保存目录: {args.save_dir}\n")
 
     # ==========================
-    # ✅ 完全按照你本地真实路径写（你告诉我的路径）
+    # 你本地真实路径（完全按你说的）
     # ==========================
     PREPROCESS = os.path.join(RVC_ROOT, "infer/modules/train/preprocess.py")
     EXTRACT_F0 = os.path.join(RVC_ROOT, "infer/modules/train/extract/extract_f0_print.py")
