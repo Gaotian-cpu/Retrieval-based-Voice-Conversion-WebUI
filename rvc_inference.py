@@ -43,9 +43,8 @@ logger.info("✅ RVC Inference Script (Single + Batch)")
 logger.info(f"✅ RVC ROOT: {RVC_ROOT}")
 logger.info("=" * 60)
 
-
 # ###########################################################################
-# 单音频推理（自己保存文件，支持自定义输出路径）
+# 单音频推理（支持任意模型路径 + 任意输出路径）
 # ###########################################################################
 def infer_single(
         model_path,
@@ -63,9 +62,18 @@ def infer_single(
     from infer.modules.vc.modules import VC
     from configs.config import Config
 
+    # ======================
+    # ✅ 核心：强制设置模型目录
+    # ======================
+    model_dir = os.path.abspath(os.path.dirname(model_path))
+    model_file = os.path.basename(model_path)
+    os.environ["weight_root"] = model_dir
+
     config = Config()
     vc = VC(config)
-    vc.get_vc(model_path)
+
+    # 只传模型文件名，不再传路径
+    vc.get_vc(model_file)
 
     logger.info("🚀 Start single inference...")
     result_msg, out_tuple = vc.vc_single(
@@ -87,11 +95,11 @@ def infer_single(
         logger.error(f"❌ 转换失败: {result_msg}")
         return False
 
-    # ✅ ✅ ✅ 这里：使用返回值，保存音频！
+    # ✅ 保存音频到自定义路径
     sr, audio_data = out_tuple
     sf.write(output_audio, audio_data, sr)
 
-    logger.info(f"✅ 转换完成！输出文件: {output_audio}")
+    logger.info(f"✅ 转换完成! 输出: {output_audio}")
     return True
 
 
@@ -115,9 +123,16 @@ def infer_batch(
     from infer.modules.vc.modules import VC
     from configs.config import Config
 
+    # ======================
+    # ✅ 核心：强制设置模型目录
+    # ======================
+    model_dir = os.path.abspath(os.path.dirname(model_path))
+    model_file = os.path.basename(model_path)
+    os.environ["weight_root"] = model_dir
+
     config = Config()
     vc = VC(config)
-    vc.get_vc(model_path)
+    vc.get_vc(model_file)
 
     logger.info("🚀 Start batch inference...")
     results = vc.vc_multi(
@@ -150,24 +165,24 @@ def main():
     parser.add_argument("--model_path", required=True, type=str, help="模型路径")
 
     # 模式
-    parser.add_argument("--mode", required=True, choices=["single", "batch"], help="single/batch")
+    parser.add_argument("--mode", required=True, choices=["single", "batch"])
 
     # 单音频
-    parser.add_argument("--transpose", type=int, default=0, help="变调")
-    parser.add_argument("--audio_path", type=str, help="单音频输入路径")
-    parser.add_argument("--output_path", type=str, help="单音频输出路径（自定义）")
+    parser.add_argument("--transpose", type=int, default=0)
+    parser.add_argument("--audio_path", type=str)
+    parser.add_argument("--output_path", type=str)
 
     # 批量
-    parser.add_argument("--input_dir", type=str, help="批量输入文件夹")
-    parser.add_argument("--output_dir", type=str, help="批量输出文件夹")
-    parser.add_argument("--export_format", type=str, default="wav", choices=["wav", "flac", "mp3", "m4a"])
+    parser.add_argument("--input_dir", type=str)
+    parser.add_argument("--output_dir", type=str)
+    parser.add_argument("--export_format", default="wav", choices=["wav", "flac", "mp3", "m4a"])
 
     # 通用
-    parser.add_argument("--index_path", type=str, default="", help="index文件路径")
+    parser.add_argument("--index_path", default="", type=str)
     parser.add_argument("--f0_method", default="rmvpe", choices=["pm", "harvest", "crepe", "rmvpe"])
     parser.add_argument("--resample_sr", type=int, default=0)
     parser.add_argument("--rms_mix_rate", type=float, default=0.25)
-    parser.add_argument("--protect", type=float, default=0.33)
+    parser.add_argument("--protect", float, default=0.33)
     parser.add_argument("--filter_radius", type=int, default=3)
     parser.add_argument("--index_rate", type=float, default=0.75)
 
@@ -175,7 +190,7 @@ def main():
 
     if args.mode == "single":
         if not args.audio_path or not args.output_path:
-            logger.error("❌ single 模式必须指定 --audio_path 和 --output_path")
+            logger.error("❌ single 模式必须 --audio_path --output_path")
             return
 
         infer_single(
@@ -193,10 +208,6 @@ def main():
         )
 
     elif args.mode == "batch":
-        if not args.input_dir or not args.output_dir:
-            logger.error("❌ batch 模式必须指定 --input_dir 和 --output_dir")
-            return
-
         infer_batch(
             model_path=args.model_path,
             transpose=args.transpose,
