@@ -1,9 +1,5 @@
 import os
 import sys
-import argparse
-import subprocess
-import logging
-
 # ###########################################################################
 # 🔥 🔥 🔥 永久屏蔽 NNPACK 警告（和 WebUI 完全一样）
 # ###########################################################################
@@ -32,6 +28,9 @@ class NNPACKWarningFilter:
 # 替换 stderr（安全版）
 sys.stderr = NNPACKWarningFilter(sys.stderr)
 # ###########################################################################
+import argparse
+import subprocess
+import logging
 
 # ==================== 日志 ====================
 logging.basicConfig(
