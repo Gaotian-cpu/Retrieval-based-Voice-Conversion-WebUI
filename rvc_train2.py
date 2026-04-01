@@ -39,26 +39,25 @@ def main():
     parser.add_argument("--save_dir", default="output_rvc/weights", type=str)
     args = parser.parse_args()
 
-    # 路径
-    RVC_ROOT = os.getcwd()
+    ###########################################################################
+    # ✅ ✅ ✅ 【关键修复】强制设置为 RVC 根目录！！！
+    ###########################################################################
+    RVC_ROOT = "/root/Project/RVC-WebUI"  # 强制写死你的RVC真实路径
+    os.chdir(RVC_ROOT)  # 直接切换工作目录
+    sys.path.append(RVC_ROOT)
+    ###########################################################################
+
     exp_dir = os.path.join(args.log_root, args.exp_name)
     os.makedirs(exp_dir, exist_ok=True)
 
     # ================== 工具函数：执行子进程 ==================
     def run_process(name, cmd_list):
-        import subprocess
         logger.info(f"🚀 开始: {name}")
         logger.info(f"命令: {' '.join(cmd_list)}")
 
-        p = subprocess.Popen(
-            cmd_list,
-            cwd=RVC_ROOT,
-            stdout=sys.stdout,
-            stderr=sys.stderr
-        )
-        p.wait()
+        p = os.spawnvp(os.P_WAIT, cmd_list[0], cmd_list)
 
-        if p.returncode != 0:
+        if p != 0:
             logger.error(f"❌ 失败: {name}")
             sys.exit(1)
         logger.info(f"✅ 完成: {name}\n")
