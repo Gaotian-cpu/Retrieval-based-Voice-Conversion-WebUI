@@ -78,8 +78,6 @@ def main():
     parser.add_argument("--pretrainD", default="", type=str)
 
     args = parser.parse_args()
-    # GHB: 调试参数
-    logger.info(u'收到的参数：{}'.format(args))
 
     ###########################################################################
     # 🔥 🔥 🔥 【新增：WebUI 自动匹配预训练模型 G/D 路径】100% 官方行为
@@ -198,6 +196,9 @@ def main():
         logger.error(f"❌ 生成config.json失败：{e}")
         sys.exit(1)
     ###########################################################################
+
+    # GHB: 调试参数
+    logger.info(u'收到的参数：{}'.format(args))
 
     # === 4 模型训练 ===
     run_step(
