@@ -6,6 +6,7 @@ import subprocess
 import logging
 import json
 import pathlib
+import random
 
 # ###########################################################################
 # 🔥 🔥 🔥 永久屏蔽 NNPACK 警告（和 WebUI 完全一样）
@@ -70,9 +71,9 @@ def main():
     parser.add_argument("--f0_method", default="rmvpe", type=str, choices=["pm", "harvest", "dio", "rmvpe"])
     parser.add_argument("--num_process", default="1", type=str)
     parser.add_argument("--save_every_epoch", default=10, type=int)
-    parser.add_argument("--save_every_weights", default=1, type=int)
+    parser.add_argument("--save_every_weights", default=0, type=int)
     parser.add_argument("--if_latest", default=0, type=int)
-    parser.add_argument("--if_cache_data_in_gpu", default=1, type=int)
+    parser.add_argument("--if_cache_data_in_gpu", default=0, type=int)
     parser.add_argument("--gpus", default="0", type=str)
     parser.add_argument("--pretrainG", default="", type=str)
     parser.add_argument("--pretrainD", default="", type=str)
@@ -84,12 +85,10 @@ def main():
     ###########################################################################
     logger.info("🔎 自动匹配预训练模型路径...")
 
-    # 官方默认路径前缀
     pretrained_dir = os.path.join(RVC_ROOT, "assets", "pretrained")
     pretrained_v2_dir = os.path.join(RVC_ROOT, "assets", "pretrained_v2")
 
     if args.version == "v1":
-        # v1 版本
         if args.sr == "48k":
             args.pretrainG = os.path.join(pretrained_dir, "G_48k.pth")
             args.pretrainD = os.path.join(pretrained_dir, "D_48k.pth")
@@ -100,19 +99,18 @@ def main():
             args.pretrainG = os.path.join(pretrained_dir, "G_32k.pth")
             args.pretrainD = os.path.join(pretrained_dir, "D_32k.pth")
     else:
-        # v2 版本
         if args.sr == "48k":
             args.pretrainG = os.path.join(pretrained_v2_dir, "f0G48k.pth")
             args.pretrainD = os.path.join(pretrained_v2_dir, "f0D48k.pth")
         elif args.sr == "40k":
-            args.pretrainG = os.path.join(pretrained_dir, "G_40k.pth")
-            args.pretrainD = os.path.join(pretrained_dir, "D_40k.pth")
+            args.pretrainG = os.path.join(pretrained_v2_dir, "f0G40k.pth")
+            args.pretrainD = os.path.join(pretrained_v2_dir, "f0D40k.pth")
         elif args.sr == "32k":
             args.pretrainG = os.path.join(pretrained_v2_dir, "f0G32k.pth")
             args.pretrainD = os.path.join(pretrained_v2_dir, "f0D32k.pth")
 
-    logger.info(f"✅ 自动匹配预训练模型G: {args.pretrainG}")
-    logger.info(f"✅ 自动匹配预训练模型D: {args.pretrainD}")
+    logger.info(f"✅ 预训练G: {args.pretrainG}")
+    logger.info(f"✅ 预训练D: {args.pretrainD}")
     ###########################################################################
 
     sr_num = args.sr.replace("k", "000")
@@ -122,9 +120,6 @@ def main():
     logger.info(f"📂 实验目录: {exp_dir}")
     logger.info(f"📂 模型输出: {args.save_dir}\n")
 
-    # ==========================
-    # 你本地真实路径（100%正确）
-    # ==========================
     PREPROCESS = os.path.join(RVC_ROOT, "infer/modules/train/preprocess.py")
     EXTRACT_F0 = os.path.join(RVC_ROOT, "infer/modules/train/extract/extract_f0_print.py")
     EXTRACT_FEATURE = os.path.join(RVC_ROOT, "infer/modules/train/extract_feature_print.py")
@@ -148,75 +143,70 @@ def main():
     # === 3 特征提取 ===
     run_step(
         EXTRACT_FEATURE,
-        [
-            "cuda",
-            "1",
-            "0",
-            exp_dir,
-            args.version,
-            "False",
-        ],
-        "Hubert特征提取（生成 3_feature768）"
+        ["cuda", "1", "0", exp_dir, args.version, "False"],
+        "Hubert 特征提取"
     )
 
     ###########################################################################
-    # 🔥 缺失步骤：生成训练文件列表 filelist.txt（100% 对齐 WebUI）
+    # 🔥 ✅ ✅ ✅ 【官方原版】生成 filelist.txt（100% 从 WebUI 复制】
     ###########################################################################
-    logger.info("🚀 开始执行: 生成训练文件列表 filelist.txt")
+    logger.info("🚀 生成官方格式 filelist.txt")
     try:
-        import glob
-        wav_files = sorted(glob.glob(os.path.join(exp_dir, "*.wav")))
+        gt_wavs_dir = os.path.join(exp_dir, "0_gt_wavs")
+        feature_dir = os.path.join(exp_dir, "3_feature768")
+        f0_dir = os.path.join(exp_dir, "2a_f0")
+        f0nsf_dir = os.path.join(exp_dir, "2b-f0nsf")
+        spk_id = 0
+
+        names = (
+                set([n.split(".")[0] for n in os.listdir(gt_wavs_dir)])
+                & set([n.split(".")[0] for n in os.listdir(feature_dir)])
+                & set([n.split(".")[0] for n in os.listdir(f0_dir)])
+                & set([n.split(".")[0] for n in os.listdir(f0nsf_dir)])
+        )
+
+        opt = []
+        for name in names:
+            opt.append(
+                f"{gt_wavs_dir}/{name}.wav|{feature_dir}/{name}.npy|{f0_dir}/{name}.wav.npy|{f0nsf_dir}/{name}.wav.npy|{spk_id}"
+            )
+
+        # 加入2条静音（必须，否则训练不执行）
+        for _ in range(2):
+            opt.append(
+                f"{RVC_ROOT}/logs/mute/0_gt_wavs/mute48k.wav|{RVC_ROOT}/logs/mute/3_feature768/mute.npy|{RVC_ROOT}/logs/mute/2a_f0/mute.wav.npy|{RVC_ROOT}/logs/mute/2b-f0nsf/mute.wav.npy|0"
+            )
+
+        random.shuffle(opt)
         filelist_path = os.path.join(exp_dir, "filelist.txt")
-
         with open(filelist_path, "w", encoding="utf-8") as f:
-            for wav in wav_files:
-                f.write(wav + "\n")
+            f.write("\n".join(opt))
 
-        logger.info(f"✅ 生成 filelist.txt 成功，共 {len(wav_files)} 个文件\n")
-    except Exception as e:
-        logger.error(f"❌ 生成 filelist.txt 失败：{e}")
+        logger.info(f"✅ filelist 生成完成，共 {len(opt)} 条数据\n")
+    except:
+        logger.exception("❌ 生成 filelist 失败")
         sys.exit(1)
 
     ###########################################################################
-    # 🔥 🔥 🔥 【官方原版缺失步骤：自动生成 config.json】 100% 对齐 infer-web.py
+    # 🔥 生成 config.json（官方逻辑）
     ###########################################################################
-    logger.info("🚀 开始执行: 生成训练配置 config.json")
+    logger.info("🚀 生成 config.json")
     try:
         from configs.config import Config
         config = Config()
-
-        #######################################################################
-        # ✅ 【唯一正确的官方判断逻辑】完全照抄 infer-web.py
-        #######################################################################
         if args.version == "v1":
-            # v1 版本：统一用 v1 配置
             config_path = f"v1/{args.sr}.json"
         else:
-            # v2 版本：40k 用 v1/40k，其他用 v2
-            if args.sr == "40k":
-                config_path = f"v1/{args.sr}.json"
-            else:
-                config_path = f"v2/{args.sr}.json"
-        #######################################################################
-        # GHB: 调试参数
-        logger.info(u'收到的参数：{}'.format(args))
+            config_path = f"v2/{args.sr}.json"
 
         config_save_path = os.path.join(exp_dir, "config.json")
         if not pathlib.Path(config_save_path).exists():
             with open(config_save_path, "w", encoding="utf-8") as f:
-                json.dump(
-                    config.json_config[config_path],
-                    f,
-                    ensure_ascii=False,
-                    indent=4,
-                    sort_keys=True,
-                )
-        logger.info("✅ 生成训练配置 config.json 成功\n")
-    except Exception as e:
-        logger.exception(u'❌ 生成config.json失败', e)
-        # logger.error(f"❌ 生成config.json失败：{e}")
+                json.dump(config.json_config[config_path], f, ensure_ascii=False, indent=4)
+        logger.info("✅ config 生成成功\n")
+    except:
+        logger.exception("❌ 生成 config 失败")
         sys.exit(1)
-    ###########################################################################
 
     # === 4 模型训练 ===
     run_step(
@@ -249,7 +239,7 @@ def main():
     )
 
     logger.info("============================================================")
-    logger.info("🎉 训练全部完成！目录和WebUI完全一致！")
+    logger.info("🎉 训练全部完成！完全对齐 WebUI！")
     logger.info("============================================================")
 
 if __name__ == "__main__":
