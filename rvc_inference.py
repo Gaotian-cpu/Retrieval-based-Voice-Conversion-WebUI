@@ -1,18 +1,28 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
+
+# ==============================================
+# 🔥 核心：只设置环境变量，不切换工作目录
+# ==============================================
+RVC_ROOT = os.path.dirname(os.path.abspath(__file__))
+os.environ["RVC_WEBUI_ROOT"] = RVC_ROOT
+os.environ["hubert_root"] = os.path.join(RVC_ROOT, "assets/hubert")
+os.environ["rmvpe_root"] = os.path.join(RVC_ROOT, "assets/rmvpe")
+
+# 清空系统变量，避免干扰
+os.environ["weight_root"] = ""
+os.environ["index_root"] = ""
+# ==============================================
+
 import argparse
 import logging
 import warnings
 import numpy as np
 import soundfile as sf
 
-# 🔥🔥🔥 【核心：设置环境变量，供全局使用】🔥🔥🔥
-RVC_ROOT = os.path.dirname(os.path.abspath(__file__))
-os.environ["RVC_WEBUI_ROOT"] = RVC_ROOT  # 把当前脚本所在目录（项目根）写入环境变量
-
 # ###########################################################################
-# 全局禁用警告
+# 全局配置
 # ###########################################################################
 warnings.filterwarnings("ignore")
 os.environ["PYTORCH_DISABLE_NNPACK"] = "1"
@@ -36,16 +46,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger("RVC-INFER")
 
-# ###########################################################################
-# 强制设置 RVC 根目录为工作目录
-# ###########################################################################
-RVC_ROOT = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(RVC_ROOT)
-os.chdir(RVC_ROOT)  # <--- 关键修复！
+# 把RVC根目录加入Python路径
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 logger.info("=" * 60)
 logger.info("✅ RVC Inference Script (Single + Batch)")
-logger.info(f"✅ RVC ROOT: {RVC_ROOT}")
+logger.info(f"✅ RVC WEBUI ROOT: {RVC_ROOT}")
+logger.info(f"✅ CURRENT WORK DIR: {os.getcwd()}")
 logger.info("=" * 60)
 
 

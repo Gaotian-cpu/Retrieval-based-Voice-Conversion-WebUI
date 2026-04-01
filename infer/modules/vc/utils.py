@@ -20,13 +20,12 @@ def get_index_path_from_model(sid):
 
 
 def load_hubert(config):
-    # 🔥🔥🔥 【从环境变量获取 RVC 根目录，绝对路径】🔥🔥🔥
+    # 从环境变量获取 RVC 根目录，绝对路径加载 hubert_base.pt
     rvc_root = os.environ.get("RVC_WEBUI_ROOT")
-
     hubert_path = os.path.join(rvc_root, "assets/hubert/hubert_base.pt")
 
     models, _, _ = checkpoint_utils.load_model_ensemble_and_task(
-        [hubert_path],  # <--- 修复
+        [hubert_path],
         suffix="",
     )
     hubert_model = models[0]
