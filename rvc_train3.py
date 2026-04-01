@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+"""
+这个版本，貌似已经把train的部分的所有流程都跑通了，后续要验证模型有没有问题
+"""
 import os
 import sys
 import argparse
@@ -41,6 +44,7 @@ logger.info("============================================================")
 logger.info(f"✅ RVC 根目录自动识别: {RVC_ROOT}")
 logger.info("============================================================\n")
 
+
 # ==================== 执行步骤：失败立即停止 ====================
 def run_step(script_path, args, step_name):
     logger.info(f"🚀 开始执行: {step_name}")
@@ -52,6 +56,7 @@ def run_step(script_path, args, step_name):
     except subprocess.CalledProcessError:
         logger.error(f"❌ {step_name} 执行失败！进程终止！")
         sys.exit(1)
+
 
 # ==================== 主流程 ====================
 def main():
@@ -183,8 +188,8 @@ def main():
             f.write("\n".join(opt))
 
         logger.info(f"✅ filelist 生成完成，共 {len(opt)} 条数据\n")
-    except:
-        logger.exception("❌ 生成 filelist 失败")
+    except Exception as e:
+        logger.exception("❌ 生成 filelist 失败", e)
         sys.exit(1)
 
     ###########################################################################
@@ -204,8 +209,8 @@ def main():
             with open(config_save_path, "w", encoding="utf-8") as f:
                 json.dump(config.json_config[config_path], f, ensure_ascii=False, indent=4)
         logger.info("✅ config 生成成功\n")
-    except:
-        logger.exception("❌ 生成 config 失败")
+    except Exception as e:
+        logger.exception("❌ 生成 config 失败", e)
         sys.exit(1)
 
     # === 4 模型训练 ===
@@ -279,7 +284,7 @@ def main():
         logger.info("✅ 索引生成完成！和 WebUI 完全一致！")
 
     except Exception as e:
-        logger.exception("❌ 索引生成失败")
+        logger.exception("❌ 索引生成失败", e)
         sys.exit(1)
 
     logger.info("============================================================")
