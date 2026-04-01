@@ -93,16 +93,16 @@ def main():
         "F0 音高提取"
     )
 
-    # === 3 ✅ 正确：6 个参数，生成 3_feature768 ===
+    # === 3 ✅ 100% 按你代码写的正确参数 ===
     run_step(
         EXTRACT_FEATURE,
         [
-            exp_dir,          # 1
-            args.num_process, # 2
-            "0",              # 3 device_id
-            "0",              # 4 is_half
+            "cuda",           # 1 device
+            "1",              # 2 n_part
+            "0",              # 3 i_part
+            exp_dir,          # 4 exp_dir（目录！）
             args.version,     # 5 version
-            RVC_ROOT          # 6 rvc根目录（缺失的关键！）
+            "False",          # 6 is_half
         ],
         "Hubert特征提取（生成 3_feature768）"
     )
