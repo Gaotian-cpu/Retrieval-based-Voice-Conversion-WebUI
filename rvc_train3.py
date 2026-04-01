@@ -16,7 +16,7 @@ os.environ["PYTORCH_DISABLE_NNPACK"] = "1"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 os.environ["MKL_SERVICE_FORCE_INTEL"] = "1"
 os.environ["KMP_AFFINITY"] = "noverbose"
-os.environ["PYTHON_WARNINGS"] = "0"
+os.environ["PYTORCH_WARNINGS"] = "0"
 
 # 强行禁用 NNPACK 核心警告
 try:
@@ -81,6 +81,42 @@ def main():
     # GHB: 调试参数
     logger.info(u'收到的参数：{}'.format(args))
 
+    ###########################################################################
+    # 🔥 🔥 🔥 【新增：WebUI 自动匹配预训练模型 G/D 路径】100% 官方行为
+    ###########################################################################
+    logger.info("🔎 自动匹配预训练模型路径...")
+
+    # 官方默认路径前缀
+    pretrained_dir = os.path.join(RVC_ROOT, "assets", "pretrained")
+    pretrained_v2_dir = os.path.join(RVC_ROOT, "assets", "pretrained_v2")
+
+    if args.version == "v1":
+        # v1 版本
+        if args.sr == "48k":
+            args.pretrainG = os.path.join(pretrained_dir, "G_48k.pth")
+            args.pretrainD = os.path.join(pretrained_dir, "D_48k.pth")
+        elif args.sr == "40k":
+            args.pretrainG = os.path.join(pretrained_dir, "G_40k.pth")
+            args.pretrainD = os.path.join(pretrained_dir, "D_40k.pth")
+        elif args.sr == "32k":
+            args.pretrainG = os.path.join(pretrained_dir, "G_32k.pth")
+            args.pretrainD = os.path.join(pretrained_dir, "D_32k.pth")
+    else:
+        # v2 版本
+        if args.sr == "48k":
+            args.pretrainG = os.path.join(pretrained_v2_dir, "f0G48k.pth")
+            args.pretrainD = os.path.join(pretrained_v2_dir, "f0D48k.pth")
+        elif args.sr == "40k":
+            args.pretrainG = os.path.join(pretrained_dir, "G_40k.pth")
+            args.pretrainD = os.path.join(pretrained_dir, "D_40k.pth")
+        elif args.sr == "32k":
+            args.pretrainG = os.path.join(pretrained_v2_dir, "f0G32k.pth")
+            args.pretrainD = os.path.join(pretrained_v2_dir, "f0D32k.pth")
+
+    logger.info(f"✅ 自动匹配预训练模型G: {args.pretrainG}")
+    logger.info(f"✅ 自动匹配预训练模型D: {args.pretrainD}")
+    ###########################################################################
+
     sr_num = args.sr.replace("k", "000")
     exp_dir = os.path.join(args.log_root, args.exp_name)
     os.makedirs(exp_dir, exist_ok=True)
@@ -133,10 +169,6 @@ def main():
         from configs.config import Config
         config = Config()
 
-        # if args.version == "v1" or args.sr == "40k":
-        #     config_path = f"v1/{args.sr}.json"
-        # else:
-        #     config_path = f"v2/{args.sr}.json"
         #######################################################################
         # ✅ 【唯一正确的官方判断逻辑】完全照抄 infer-web.py
         #######################################################################
@@ -149,7 +181,7 @@ def main():
                 config_path = f"v1/{args.sr}.json"
             else:
                 config_path = f"v2/{args.sr}.json"
-            #######################################################################
+        #######################################################################
 
         config_save_path = os.path.join(exp_dir, "config.json")
         if not pathlib.Path(config_save_path).exists():
