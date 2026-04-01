@@ -160,6 +160,24 @@ def main():
     )
 
     ###########################################################################
+    # 🔥 缺失步骤：生成训练文件列表 filelist.txt（100% 对齐 WebUI）
+    ###########################################################################
+    logger.info("🚀 开始执行: 生成训练文件列表 filelist.txt")
+    try:
+        import glob
+        wav_files = sorted(glob.glob(os.path.join(exp_dir, "*.wav")))
+        filelist_path = os.path.join(exp_dir, "filelist.txt")
+
+        with open(filelist_path, "w", encoding="utf-8") as f:
+            for wav in wav_files:
+                f.write(wav + "\n")
+
+        logger.info(f"✅ 生成 filelist.txt 成功，共 {len(wav_files)} 个文件\n")
+    except Exception as e:
+        logger.error(f"❌ 生成 filelist.txt 失败：{e}")
+        sys.exit(1)
+
+    ###########################################################################
     # 🔥 🔥 🔥 【官方原版缺失步骤：自动生成 config.json】 100% 对齐 infer-web.py
     ###########################################################################
     logger.info("🚀 开始执行: 生成训练配置 config.json")
