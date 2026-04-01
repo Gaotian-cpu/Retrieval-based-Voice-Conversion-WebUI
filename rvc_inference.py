@@ -7,6 +7,10 @@ import warnings
 import numpy as np
 import soundfile as sf
 
+# 🔥🔥🔥 【核心：设置环境变量，供全局使用】🔥🔥🔥
+RVC_ROOT = os.path.dirname(os.path.abspath(__file__))
+os.environ["RVC_WEBUI_ROOT"] = RVC_ROOT  # 把当前脚本所在目录（项目根）写入环境变量
+
 # ###########################################################################
 # 全局禁用警告
 # ###########################################################################

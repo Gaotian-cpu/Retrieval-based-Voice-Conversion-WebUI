@@ -20,10 +20,8 @@ def get_index_path_from_model(sid):
 
 
 def load_hubert(config):
-    # 🔥 🔥 🔥 正确拼出项目根目录（绝对不会错）
-    file_path = os.path.abspath(__file__)
-    # 走到项目根目录：/infer/modules/vc → 退3级
-    rvc_root = os.path.dirname(os.path.dirname(os.path.dirname(file_path)))
+    # 🔥🔥🔥 【从环境变量获取 RVC 根目录，绝对路径】🔥🔥🔥
+    rvc_root = os.environ.get("RVC_WEBUI_ROOT")
 
     hubert_path = os.path.join(rvc_root, "assets/hubert/hubert_base.pt")
 
