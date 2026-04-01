@@ -7,20 +7,30 @@ import logging
 # ###########################################################################
 # 🔥 🔥 🔥 永久屏蔽 NNPACK 警告（和 WebUI 完全一样）
 # ###########################################################################
-import warnings
-warnings.filterwarnings("ignore")
 os.environ["PYTORCH_DISABLE_NNPACK"] = "1"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-os.environ["MKL_SERVICE_FORCE_INTEL"] = "1"
+os.environ["PYTHONWARNINGS"] = "ignore"
 os.environ["KMP_AFFINITY"] = "noverbose"
-os.environ["PYTORCH_WARNINGS"] = "0"
+os.environ["MKL_SERVICE_FORCE_INTEL"] = "1"
+os.environ["PYTORCH_JIT"] = "0"
 
-# 强行禁用 NNPACK 核心警告
-try:
-    import torch
-    torch.backends.nnpack.enabled = False
-except:
-    pass
+# 安全过滤器：只过滤 NNPACK 警告
+class NNPACKWarningFilter:
+    def __init__(self, original_stderr):
+        self.original_stderr = original_stderr
+
+    def write(self, message):
+        # 只屏蔽包含 NNPACK 的警告行
+        if "NNPACK.cpp" in message or "Could not initialize NNPACK" in message:
+            return
+        # 其他所有内容正常输出（包括真实错误）
+        self.original_stderr.write(message)
+
+    def flush(self):
+        self.original_stderr.flush()
+
+# 替换 stderr（安全版）
+sys.stderr = NNPACKWarningFilter(sys.stderr)
 # ###########################################################################
 
 # ==================== 日志 ====================
