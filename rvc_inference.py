@@ -18,7 +18,6 @@ os.environ["index_root"] = ""
 import argparse
 import logging
 import warnings
-import numpy as np
 import soundfile as sf
 
 # ###########################################################################
@@ -107,6 +106,14 @@ def infer_single(
         return False
 
     sr, audio_data = out_tuple
+
+    # ==========================
+    # 🔥 修复：自动创建输出目录
+    # ==========================
+    output_dir = os.path.dirname(os.path.abspath(output_audio))
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir, exist_ok=True)
+
     sf.write(output_audio, audio_data, sr)
 
     logger.info(f"✅ 转换完成! 输出: {output_audio}")
