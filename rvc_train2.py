@@ -71,11 +71,11 @@ def main():
     logger.info(f"📂 模型保存目录: {args.save_dir}\n")
 
     # ==========================
-    # ✅ 官方 100% 真实脚本名称（全部带 _print）
+    # ✅ 完全按照你本地真实路径写（你告诉我的路径）
     # ==========================
     PREPROCESS = os.path.join(RVC_ROOT, "infer/modules/train/preprocess.py")
-    EXTRACT_F0 = os.path.join(RVC_ROOT, "infer/modules/train/extract_f0_print.py")  # 这里修复了！
-    EXTRACT_FEAT = os.path.join(RVC_ROOT, "infer/modules/train/extract_feature_print.py")
+    EXTRACT_F0 = os.path.join(RVC_ROOT, "infer/modules/train/extract/extract_f0_print.py")
+    EXTRACT_FEAT = os.path.join(RVC_ROOT, "infer/modules/train/extract/extract_feature_print.py")
     TRAIN = os.path.join(RVC_ROOT, "infer/modules/train/train.py")
     TRAIN_INDEX = os.path.join(RVC_ROOT, "infer/modules/train/train_index.py")
 
