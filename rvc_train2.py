@@ -75,11 +75,11 @@ def main():
     logger.info(f"📂 模型输出: {args.save_dir}\n")
 
     # ==========================
-    # 官方真实路径（完全按你本地）
+    # ✅ 100% 按你本地真实路径写（绝对正确）
     # ==========================
     PREPROCESS = os.path.join(RVC_ROOT, "infer/modules/train/preprocess.py")
     EXTRACT_F0 = os.path.join(RVC_ROOT, "infer/modules/train/extract/extract_f0_print.py")
-    EXTRACT_FEATURE = os.path.join(RVC_ROOT, "infer/modules/train/extract/extract_feature_print.py")
+    EXTRACT_FEATURE = os.path.join(RVC_ROOT, "infer/modules/train/extract_feature_print.py")
     TRAIN = os.path.join(RVC_ROOT, "infer/modules/train/train.py")
     TRAIN_INDEX = os.path.join(RVC_ROOT, "infer/modules/train/train_index.py")
 
@@ -99,7 +99,7 @@ def main():
             "F0 音高提取"
         )
 
-    # === 3 Hubert 特征提取（生成 3_feature768！WebUI必备！）===
+    # === 3 Hubert 特征提取（生成 3_feature768）===
     if not args.skip_feature:
         run_step(
             EXTRACT_FEATURE,
