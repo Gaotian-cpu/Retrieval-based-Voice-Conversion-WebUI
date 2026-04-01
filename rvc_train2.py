@@ -32,7 +32,7 @@ def run_step(script_path, args, step_name):
 
 # ==================== 主流程 ====================
 def main():
-    parser = argparse.ArgumentParser(description="RVC 官方纯净训练脚本（无错版）")
+    parser = argparse.ArgumentParser(description="RVC 官方纯净训练脚本（最终无错版）")
 
     parser.add_argument("--exp_name", required=True, type=str)
     parser.add_argument("--dataset_dir", required=True, type=str)
@@ -61,7 +61,7 @@ def main():
 
     args = parser.parse_args()
 
-    # 转换采样率 48k → 48000（官方必须要数字）
+    # 转换采样率 48k → 48000
     sr_num = args.sr.replace("k", "000")
 
     exp_dir = os.path.join(args.log_root, args.exp_name)
@@ -77,11 +77,19 @@ def main():
     TRAIN = os.path.join(RVC_ROOT, "infer/modules/train/train.py")
     TRAIN_INDEX = os.path.join(RVC_ROOT, "infer/modules/train/train_index.py")
 
-    # 1. 数据预处理
+    # ==========================
+    # ✅ 这里是最终正确的参数顺序！
+    # ==========================
     if not args.skip_process:
         run_step(
             PREPROCESS,
-            [args.dataset_dir, sr_num, exp_dir, args.num_process, "False"],
+            [
+                args.dataset_dir,   # 1
+                sr_num,             # 2
+                args.num_process,   # 3
+                exp_dir,            # 4
+                "False"             # 5
+            ],
             "数据预处理（切片/重采样/归一化）"
         )
 
@@ -98,7 +106,7 @@ def main():
             "Hubert 特征提取"
         )
 
-    # 3. 模型训练（必须成功）
+    # 3. 模型训练
     run_step(
         TRAIN,
         [
@@ -134,7 +142,6 @@ def main():
     logger.info("🎉 所有步骤全部成功！训练完成！")
     logger.info(f"📦 模型输出: {args.save_dir}")
     logger.info("============================================================")
-
 
 if __name__ == "__main__":
     main()
