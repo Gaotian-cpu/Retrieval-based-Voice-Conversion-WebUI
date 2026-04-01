@@ -70,26 +70,26 @@ def main():
     logger.info(f"📂 实验工作目录: {exp_dir}")
     logger.info(f"📂 模型保存目录: {args.save_dir}\n")
 
-    # 官方真实路径
+    # ==========================
+    # ✅ 官方 100% 真实脚本名称（全部带 _print）
+    # ==========================
     PREPROCESS = os.path.join(RVC_ROOT, "infer/modules/train/preprocess.py")
-    EXTRACT_F0 = os.path.join(RVC_ROOT, "infer/modules/train/extract_f0.py")
+    EXTRACT_F0 = os.path.join(RVC_ROOT, "infer/modules/train/extract_f0_print.py")  # 这里修复了！
     EXTRACT_FEAT = os.path.join(RVC_ROOT, "infer/modules/train/extract_feature_print.py")
     TRAIN = os.path.join(RVC_ROOT, "infer/modules/train/train.py")
     TRAIN_INDEX = os.path.join(RVC_ROOT, "infer/modules/train/train_index.py")
 
-    # ==========================
-    # ✅ 最终正确：6 个参数！
-    # ==========================
+    # 1. 数据预处理
     if not args.skip_process:
         run_step(
             PREPROCESS,
             [
-                args.dataset_dir,   # 1
-                sr_num,             # 2
-                args.num_process,   # 3
-                exp_dir,            # 4
-                "False",            # 5
-                "0.99",             # 6  <-- 缺失的最后一个参数
+                args.dataset_dir,
+                sr_num,
+                args.num_process,
+                exp_dir,
+                "False",
+                "0.99",
             ],
             "数据预处理（切片/重采样/归一化）"
         )
