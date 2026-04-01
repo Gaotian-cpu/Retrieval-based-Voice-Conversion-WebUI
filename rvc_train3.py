@@ -131,10 +131,23 @@ def main():
         from configs.config import Config
         config = Config()
 
-        if args.version == "v1" or args.sr == "40k":
+        # if args.version == "v1" or args.sr == "40k":
+        #     config_path = f"v1/{args.sr}.json"
+        # else:
+        #     config_path = f"v2/{args.sr}.json"
+        #######################################################################
+        # ✅ 【唯一正确的官方判断逻辑】完全照抄 infer-web.py
+        #######################################################################
+        if args.version == "v1":
+            # v1 版本：统一用 v1 配置
             config_path = f"v1/{args.sr}.json"
         else:
-            config_path = f"v2/{args.sr}.json"
+            # v2 版本：40k 用 v1/40k，其他用 v2
+            if args.sr == "40k":
+                config_path = f"v1/{args.sr}.json"
+            else:
+                config_path = f"v2/{args.sr}.json"
+            #######################################################################
 
         config_save_path = os.path.join(exp_dir, "config.json")
         if not pathlib.Path(config_save_path).exists():
