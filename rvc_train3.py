@@ -78,6 +78,8 @@ def main():
     parser.add_argument("--pretrainD", default="", type=str)
 
     args = parser.parse_args()
+    # GHB: 调试参数
+    logger.info(u'收到的参数：{}'.format(args))
 
     sr_num = args.sr.replace("k", "000")
     exp_dir = os.path.join(args.log_root, args.exp_name)
