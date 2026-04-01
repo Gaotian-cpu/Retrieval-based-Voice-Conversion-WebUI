@@ -4,7 +4,6 @@ import sys
 import argparse
 import logging
 import warnings
-import numpy as np
 import soundfile as sf
 
 # ###########################################################################
@@ -44,7 +43,7 @@ logger.info(f"✅ RVC ROOT: {RVC_ROOT}")
 logger.info("=" * 60)
 
 # ###########################################################################
-# 单音频推理（支持任意模型路径 + 任意输出路径）
+# 单音频推理
 # ###########################################################################
 def infer_single(
         model_path,
@@ -62,17 +61,13 @@ def infer_single(
     from infer.modules.vc.modules import VC
     from configs.config import Config
 
-    # ======================
-    # ✅ 核心：强制设置模型目录
-    # ======================
+    # 强制设置模型路径
     model_dir = os.path.abspath(os.path.dirname(model_path))
     model_file = os.path.basename(model_path)
     os.environ["weight_root"] = model_dir
 
     config = Config()
     vc = VC(config)
-
-    # 只传模型文件名，不再传路径
     vc.get_vc(model_file)
 
     logger.info("🚀 Start single inference...")
@@ -95,7 +90,6 @@ def infer_single(
         logger.error(f"❌ 转换失败: {result_msg}")
         return False
 
-    # ✅ 保存音频到自定义路径
     sr, audio_data = out_tuple
     sf.write(output_audio, audio_data, sr)
 
@@ -123,9 +117,7 @@ def infer_batch(
     from infer.modules.vc.modules import VC
     from configs.config import Config
 
-    # ======================
-    # ✅ 核心：强制设置模型目录
-    # ======================
+    # 强制设置模型路径
     model_dir = os.path.abspath(os.path.dirname(model_path))
     model_file = os.path.basename(model_path)
     os.environ["weight_root"] = model_dir
@@ -182,7 +174,7 @@ def main():
     parser.add_argument("--f0_method", default="rmvpe", choices=["pm", "harvest", "crepe", "rmvpe"])
     parser.add_argument("--resample_sr", type=int, default=0)
     parser.add_argument("--rms_mix_rate", type=float, default=0.25)
-    parser.add_argument("--protect", float, default=0.33)
+    parser.add_argument("--protect", type=float, default=0.33)
     parser.add_argument("--filter_radius", type=int, default=3)
     parser.add_argument("--index_rate", type=float, default=0.75)
 
