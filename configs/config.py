@@ -67,7 +67,7 @@ class Config:
         self.x_pad, self.x_query, self.x_center, self.x_max = self.device_config()
 
     @staticmethod
-    def load_config_json(self) -> dict:
+    def load_config_json() -> dict:
         d = {}
         for config_file in version_config_list:
             # 🔥 修复：使用绝对路径
