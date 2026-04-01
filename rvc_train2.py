@@ -1,167 +1,137 @@
+# ######################### 安全环境配置（仅关闭NNPACK）#########################
 import os
 import sys
-# ###########################################################################
-# 🔥 🔥 🔥 永久屏蔽 NNPACK 警告（和 WebUI 完全一样）
-# ###########################################################################
-os.environ["PYTORCH_DISABLE_NNPACK"] = "1"
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-os.environ["PYTHONWARNINGS"] = "ignore"
-os.environ["KMP_AFFINITY"] = "noverbose"
-os.environ["MKL_SERVICE_FORCE_INTEL"] = "1"
-os.environ["PYTORCH_JIT"] = "0"
-
-# 安全过滤器：只过滤 NNPACK 警告
-class NNPACKWarningFilter:
-    def __init__(self, original_stderr):
-        self.original_stderr = original_stderr
-
-    def write(self, message):
-        # 只屏蔽包含 NNPACK 的警告行
-        if "NNPACK.cpp" in message or "Could not initialize NNPACK" in message:
-            return
-        # 其他所有内容正常输出（包括真实错误）
-        self.original_stderr.write(message)
-
-    def flush(self):
-        self.original_stderr.flush()
-
-# 替换 stderr（安全版）
-sys.stderr = NNPACKWarningFilter(sys.stderr)
-# ###########################################################################
-import argparse
-import subprocess
+import json
 import logging
 
-# ==================== 日志 ====================
-logging.basicConfig(
-    format="%(asctime)s | %(levelname)-5s | %(message)s",
-    level=logging.INFO,
-    datefmt="%Y-%m-%d %H:%M:%S"
-)
-logger = logging.getLogger("RVC-Train")
+# 环境变量（等效sh里的export，不会屏蔽错误）
+os.environ["PYTORCH_DISABLE_NNPACK"] = "1"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+os.environ["PYTHONWARNINGS"] = "ignore"
+os.environ["MKL_SERVICE_FORCE_INTEL"] = "1"
 
-# ==================== 自动识别RVC根目录 ====================
-RVC_ROOT = os.path.dirname(os.path.abspath(__file__))
-logger.info("============================================================")
-logger.info(f"✅ RVC 根目录自动识别: {RVC_ROOT}")
-logger.info("============================================================\n")
+# 日志设置
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# ==================== 执行步骤：失败立即停止 ====================
-def run_step(script_path, args, step_name):
-    logger.info(f"🚀 开始执行: {step_name}")
-    cmd = [sys.executable, script_path] + args
+# ##############################################################################
 
-    try:
-        subprocess.check_call(cmd, cwd=RVC_ROOT)
-        logger.info(f"✅ {step_name} 执行成功\n")
-    except subprocess.CalledProcessError:
-        logger.error(f"❌ {step_name} 执行失败！进程终止！")
-        sys.exit(1)
-
-# ==================== 主流程 ====================
 def main():
-    parser = argparse.ArgumentParser(description="RVC 完整训练脚本（和WebUI完全一致）")
-
+    import argparse
+    parser = argparse.ArgumentParser()
     parser.add_argument("--exp_name", required=True, type=str)
     parser.add_argument("--dataset_dir", required=True, type=str)
-    parser.add_argument("--sr", required=True, choices=["32k", "40k", "48k"])
-    parser.add_argument("--version", default="v2", choices=["v1", "v2"])
-    parser.add_argument("--total_epoch", default=50, type=int)
-    parser.add_argument("--batch_size", default=32, type=int)
-    parser.add_argument("--if_f0", default=1, type=int)
-
-    parser.add_argument("--log_root", required=True, type=str)
-    parser.add_argument("--save_dir", required=True, type=str)
-
-    parser.add_argument("--f0_method", default="rmvpe", type=str, choices=["pm", "harvest", "dio", "rmvpe"])
+    parser.add_argument("--sr", required=True, type=str, choices=["32k", "40k", "48k"])
+    parser.add_argument("--version", default="v2", type=str, choices=["v1", "v2"])
+    parser.add_argument("--f0_method", default="rmvpe", type=str)
     parser.add_argument("--num_process", default="1", type=str)
-    parser.add_argument("--save_every_epoch", default=10, type=int)
-    parser.add_argument("--save_every_weights", default=1, type=int)
+    parser.add_argument("--total_epoch", default=20, type=int)
+    parser.add_argument("--batch_size", default=4, type=int)
+    parser.add_argument("--save_epoch", default=5, type=int)
+    parser.add_argument("--if_f0", default=1, type=int)
     parser.add_argument("--if_latest", default=0, type=int)
-    parser.add_argument("--if_cache_data_in_gpu", default=1, type=int)
+    parser.add_argument("--if_cache_data_in_gpu", default=0, type=int)
+    parser.add_argument("--if_save_every_weights", default=0, type=int)
     parser.add_argument("--gpus", default="0", type=str)
-    parser.add_argument("--pretrainG", default="", type=str)
-    parser.add_argument("--pretrainD", default="", type=str)
-
+    parser.add_argument("--pretrained_G", default="", type=str)
+    parser.add_argument("--pretrained_D", default="", type=str)
+    parser.add_argument("--log_root", default="output_rvc/my_logs", type=str)
+    parser.add_argument("--save_dir", default="output_rvc/weights", type=str)
     args = parser.parse_args()
 
-    sr_num = args.sr.replace("k", "000")
+    # 路径
+    RVC_ROOT = os.getcwd()
     exp_dir = os.path.join(args.log_root, args.exp_name)
     os.makedirs(exp_dir, exist_ok=True)
 
-    logger.info(f"📂 实验目录: {exp_dir}")
-    logger.info(f"📂 模型输出: {args.save_dir}\n")
+    # ================== 工具函数：执行子进程 ==================
+    def run_process(name, cmd_list):
+        import subprocess
+        logger.info(f"🚀 开始: {name}")
+        logger.info(f"命令: {' '.join(cmd_list)}")
 
-    # ==========================
-    # 你本地真实路径（100%正确）
-    # ==========================
-    PREPROCESS = os.path.join(RVC_ROOT, "infer/modules/train/preprocess.py")
-    EXTRACT_F0 = os.path.join(RVC_ROOT, "infer/modules/train/extract/extract_f0_print.py")
-    EXTRACT_FEATURE = os.path.join(RVC_ROOT, "infer/modules/train/extract_feature_print.py")
-    TRAIN = os.path.join(RVC_ROOT, "infer/modules/train/train.py")
-    TRAIN_INDEX = os.path.join(RVC_ROOT, "infer/modules/train/train_index.py")
+        p = subprocess.Popen(
+            cmd_list,
+            cwd=RVC_ROOT,
+            stdout=sys.stdout,
+            stderr=sys.stderr
+        )
+        p.wait()
 
-    # === 1 数据预处理 ===
-    run_step(
-        PREPROCESS,
-        [args.dataset_dir, sr_num, args.num_process, exp_dir, "False", "0.99"],
-        "数据预处理"
-    )
+        if p.returncode != 0:
+            logger.error(f"❌ 失败: {name}")
+            sys.exit(1)
+        logger.info(f"✅ 完成: {name}\n")
 
-    # === 2 F0 提取 ===
-    run_step(
-        EXTRACT_F0,
-        [exp_dir, args.num_process, args.f0_method],
-        "F0 音高提取"
-    )
+    # ================== 步骤1：预处理 ==================
+    sr_dict = {"32k": 32000, "40k": 40000, "48k": 48000}
+    actual_sr = sr_dict[args.sr]
 
-    # === 3 ✅ 100% 按你代码写的正确参数 ===
-    run_step(
-        EXTRACT_FEATURE,
-        [
-            "cuda",
-            "1",
-            "0",
-            exp_dir,
-            args.version,
-            "False",
-        ],
-        "Hubert特征提取（生成 3_feature768）"
-    )
+    cmd_pre = [
+        sys.executable, "infer/modules/train/preprocess.py",
+        args.dataset_dir, str(actual_sr), args.num_process,
+        exp_dir, "False", "0.9"
+    ]
+    run_process("数据预处理", cmd_pre)
 
-    # === 4 模型训练 ===
-    run_step(
-        TRAIN,
-        [
-            "-se", str(args.save_every_epoch),
-            "-te", str(args.total_epoch),
-            "-pg", args.pretrainG,
-            "-pd", args.pretrainD,
-            "-g", args.gpus,
-            "-bs", str(args.batch_size),
-            "-e", args.exp_name,
-            "-sr", args.sr,
-            "-sw", str(args.save_every_weights),
-            "-v", args.version,
-            "-f0", str(args.if_f0),
-            "-l", str(args.if_latest),
-            "-c", str(args.if_cache_data_in_gpu),
-            "-log_root", args.log_root,
-            "-save_dir", args.save_dir,
-        ],
-        "模型训练"
-    )
+    # ================== 步骤2：提取F0 ==================
+    cmd_f0 = [
+        sys.executable, "infer/modules/train/extract/extract_f0_print.py",
+        exp_dir, args.num_process, args.f0_method
+    ]
+    run_process("F0提取", cmd_f0)
 
-    # === 5 索引生成 ===
-    run_step(
-        TRAIN_INDEX,
-        [exp_dir, args.version],
-        "索引生成"
-    )
+    # ================== 步骤3：提取Hubert特征 ==================
+    cmd_feat = [
+        sys.executable, "infer/modules/train/extract_feature_print.py",
+        "cuda", "1", "0", exp_dir, args.version, "False"
+    ]
+    run_process("Hubert特征提取", cmd_feat)
 
-    logger.info("============================================================")
-    logger.info("🎉 训练全部完成！目录和WebUI完全一致！")
-    logger.info("============================================================")
+    # ================== 步骤4：【官方原版】生成config.json ==================
+    try:
+        from configs.config import Config
+        config = Config()
+
+        if args.version == "v1" or args.sr == "40k":
+            config_path = f"v1/{args.sr}.json"
+        else:
+            config_path = f"v2/{args.sr}.json"
+
+        config_save_path = os.path.join(exp_dir, "config.json")
+        if not os.path.exists(config_save_path):
+            with open(config_save_path, "w", encoding="utf-8") as f:
+                json.dump(config.json_config[config_path], f, ensure_ascii=False, indent=4)
+        logger.info("✅ 生成 config.json 完成\n")
+    except Exception as e:
+        logger.error(f"❌ 生成config失败: {e}")
+        sys.exit(1)
+
+    # ================== 步骤5：训练模型 ==================
+    cmd_train = [
+        sys.executable, "infer/modules/train/train.py",
+        "-e", args.exp_name,
+        "-sr", args.sr,
+        "-f0", str(args.if_f0),
+        "-bs", str(args.batch_size),
+        "-g", args.gpus,
+        "-te", str(args.total_epoch),
+        "-se", str(args.save_epoch),
+        "-l", str(args.if_latest),
+        "-c", str(args.if_cache_data_in_gpu),
+        "-sw", str(args.if_save_every_weights),
+        "-v", args.version,
+        "-log_root", args.log_root,
+        "-save_dir", args.save_dir,
+    ]
+    if args.pretrained_G:
+        cmd_train += ["-pg", args.pretrained_G]
+    if args.pretrained_D:
+        cmd_train += ["-pd", args.pretrained_D]
+
+    run_process("模型训练", cmd_train)
+
+    logger.info("🎉 全部训练流程完成！")
 
 if __name__ == "__main__":
     main()
