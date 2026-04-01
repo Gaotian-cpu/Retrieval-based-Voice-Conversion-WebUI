@@ -20,8 +20,12 @@ def get_index_path_from_model(sid):
 
 
 def load_hubert(config):
+    # 修复：使用绝对路径
+    rvc_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    hubert_path = os.path.join(rvc_root, "assets/hubert/hubert_base.pt")
+
     models, _, _ = checkpoint_utils.load_model_ensemble_and_task(
-        ["assets/hubert/hubert_base.pt"],
+        [hubert_path],  # <--- 修复
         suffix="",
     )
     hubert_model = models[0]

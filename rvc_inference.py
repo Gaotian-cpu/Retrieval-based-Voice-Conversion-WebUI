@@ -33,10 +33,11 @@ logging.basicConfig(
 logger = logging.getLogger("RVC-INFER")
 
 # ###########################################################################
-# RVC 根目录
+# 强制设置 RVC 根目录为工作目录
 # ###########################################################################
 RVC_ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(RVC_ROOT)
+os.chdir(RVC_ROOT)  # <--- 关键修复！
 
 logger.info("=" * 60)
 logger.info("✅ RVC Inference Script (Single + Batch)")
@@ -63,15 +64,12 @@ def infer_single(
     from infer.modules.vc.modules import VC
     from configs.config import Config
 
-    # ======================
-    # ✅ 强制设置所有环境变量
-    # ======================
     model_dir = os.path.abspath(os.path.dirname(model_path))
     model_file = os.path.basename(model_path)
     index_dir = os.path.abspath(os.path.dirname(index_path)) if index_path else model_dir
 
     os.environ["weight_root"] = model_dir
-    os.environ["index_root"] = index_dir  # <-- 修复报错
+    os.environ["index_root"] = index_dir
 
     config = Config()
     vc = VC(config)
@@ -129,7 +127,7 @@ def infer_batch(
     index_dir = os.path.abspath(os.path.dirname(index_path)) if index_path else model_dir
 
     os.environ["weight_root"] = model_dir
-    os.environ["index_root"] = index_dir  # <-- 修复报错
+    os.environ["index_root"] = index_dir
 
     config = Config()
     vc = VC(config)
