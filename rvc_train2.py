@@ -4,11 +4,24 @@ import argparse
 import subprocess
 import logging
 
-# ==================== 屏蔽警告（和WebUI一致）====================
+# ###########################################################################
+# 🔥 🔥 🔥 永久屏蔽 NNPACK 警告（和 WebUI 完全一样）
+# ###########################################################################
 import warnings
 warnings.filterwarnings("ignore")
 os.environ["PYTORCH_DISABLE_NNPACK"] = "1"
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+os.environ["MKL_SERVICE_FORCE_INTEL"] = "1"
+os.environ["KMP_AFFINITY"] = "noverbose"
+os.environ["PYTORCH_WARNINGS"] = "0"
+
+# 强行禁用 NNPACK 核心警告
+try:
+    import torch
+    torch.backends.nnpack.enabled = False
+except:
+    pass
+# ###########################################################################
 
 # ==================== 日志 ====================
 logging.basicConfig(
@@ -97,12 +110,12 @@ def main():
     run_step(
         EXTRACT_FEATURE,
         [
-            "cuda",           # 1 device
-            "1",              # 2 n_part
-            "0",              # 3 i_part
-            exp_dir,          # 4 exp_dir（目录！）
-            args.version,     # 5 version
-            "False",          # 6 is_half
+            "cuda",
+            "1",
+            "0",
+            exp_dir,
+            args.version,
+            "False",
         ],
         "Hubert特征提取（生成 3_feature768）"
     )
