@@ -4,6 +4,8 @@ import sys
 import argparse
 import logging
 import warnings
+import numpy as np
+import soundfile as sf
 
 # ###########################################################################
 # 全局禁用警告
@@ -43,12 +45,13 @@ logger.info("=" * 60)
 
 
 # ###########################################################################
-# 单音频推理（100% 匹配真实 vc_single 参数）
+# 单音频推理（自己保存文件，支持自定义输出路径）
 # ###########################################################################
 def infer_single(
         model_path,
         transpose,
         input_audio,
+        output_audio,
         index_path,
         f0_method,
         resample_sr,
@@ -80,15 +83,20 @@ def infer_single(
         protect=protect
     )
 
-    if out_tuple is not None and out_tuple[1] is not None:
-        logger.info(f"✅ Done: {result_msg}")
-    else:
-        logger.error(f"❌ Fail: {result_msg}")
-    return out_tuple
+    if out_tuple is None or out_tuple[1] is None:
+        logger.error(f"❌ 转换失败: {result_msg}")
+        return False
+
+    # ✅ ✅ ✅ 这里：使用返回值，保存音频！
+    sr, audio_data = out_tuple
+    sf.write(output_audio, audio_data, sr)
+
+    logger.info(f"✅ 转换完成！输出文件: {output_audio}")
+    return True
 
 
 # ###########################################################################
-# 批量推理（100% 匹配真实 vc_multi 参数）
+# 批量推理
 # ###########################################################################
 def infer_batch(
         model_path,
@@ -139,40 +147,42 @@ def infer_batch(
 # ###########################################################################
 def main():
     parser = argparse.ArgumentParser(description="RVC Inference (Single + Batch)")
-    parser.add_argument("--model_path", required=True, type=str, help="Model .pth path")
+    parser.add_argument("--model_path", required=True, type=str, help="模型路径")
 
-    # Mode
-    parser.add_argument("--mode", required=True, choices=["single", "batch"], help="single or batch")
+    # 模式
+    parser.add_argument("--mode", required=True, choices=["single", "batch"], help="single/batch")
 
-    # Single
-    parser.add_argument("--transpose", type=int, default=0, help="Pitch shift (12 up/-12 down)")
-    parser.add_argument("--audio_path", type=str, help="Single audio path (for single mode)")
+    # 单音频
+    parser.add_argument("--transpose", type=int, default=0, help="变调")
+    parser.add_argument("--audio_path", type=str, help="单音频输入路径")
+    parser.add_argument("--output_path", type=str, help="单音频输出路径（自定义）")
 
-    # Batch
-    parser.add_argument("--input_dir", type=str, help="Batch input folder")
-    parser.add_argument("--output_dir", type=str, help="Batch output folder")
+    # 批量
+    parser.add_argument("--input_dir", type=str, help="批量输入文件夹")
+    parser.add_argument("--output_dir", type=str, help="批量输出文件夹")
     parser.add_argument("--export_format", type=str, default="wav", choices=["wav", "flac", "mp3", "m4a"])
 
-    # Common
-    parser.add_argument("--index_path", type=str, default="", help="Index .index path")
+    # 通用
+    parser.add_argument("--index_path", type=str, default="", help="index文件路径")
     parser.add_argument("--f0_method", default="rmvpe", choices=["pm", "harvest", "crepe", "rmvpe"])
-    parser.add_argument("--resample_sr", type=int, default=0, help="0=disable")
-    parser.add_argument("--rms_mix_rate", type=float, default=0.25, help="Volume envelope")
-    parser.add_argument("--protect", type=float, default=0.33, help="Protect consonants/breath")
-    parser.add_argument("--filter_radius", type=int, default=3, help="Median filter for f0")
-    parser.add_argument("--index_rate", type=float, default=0.75, help="Search feature ratio")
+    parser.add_argument("--resample_sr", type=int, default=0)
+    parser.add_argument("--rms_mix_rate", type=float, default=0.25)
+    parser.add_argument("--protect", type=float, default=0.33)
+    parser.add_argument("--filter_radius", type=int, default=3)
+    parser.add_argument("--index_rate", type=float, default=0.75)
 
     args = parser.parse_args()
 
     if args.mode == "single":
-        if not args.audio_path:
-            logger.error("❌ --audio_path required in single mode")
+        if not args.audio_path or not args.output_path:
+            logger.error("❌ single 模式必须指定 --audio_path 和 --output_path")
             return
 
         infer_single(
             model_path=args.model_path,
             transpose=args.transpose,
             input_audio=args.audio_path,
+            output_audio=args.output_path,
             index_path=args.index_path,
             f0_method=args.f0_method,
             resample_sr=args.resample_sr,
@@ -184,7 +194,7 @@ def main():
 
     elif args.mode == "batch":
         if not args.input_dir or not args.output_dir:
-            logger.error("❌ --input_dir --output_dir required in batch mode")
+            logger.error("❌ batch 模式必须指定 --input_dir 和 --output_dir")
             return
 
         infer_batch(
