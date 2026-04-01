@@ -180,6 +180,8 @@ def main():
             else:
                 config_path = f"v2/{args.sr}.json"
         #######################################################################
+        # GHB: 调试参数
+        logger.info(u'收到的参数：{}'.format(args))
 
         config_save_path = os.path.join(exp_dir, "config.json")
         if not pathlib.Path(config_save_path).exists():
@@ -196,9 +198,6 @@ def main():
         logger.error(f"❌ 生成config.json失败：{e}")
         sys.exit(1)
     ###########################################################################
-
-    # GHB: 调试参数
-    logger.info(u'收到的参数：{}'.format(args))
 
     # === 4 模型训练 ===
     run_step(
