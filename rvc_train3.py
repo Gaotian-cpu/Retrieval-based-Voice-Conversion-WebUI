@@ -124,7 +124,7 @@ def main():
     EXTRACT_F0 = os.path.join(RVC_ROOT, "infer/modules/train/extract/extract_f0_print.py")
     EXTRACT_FEATURE = os.path.join(RVC_ROOT, "infer/modules/train/extract_feature_print.py")
     TRAIN = os.path.join(RVC_ROOT, "infer/modules/train/train.py")
-    TRAIN_INDEX = os.path.join(RVC_ROOT, "infer/modules/train/train_index.py")
+    # TRAIN_INDEX = os.path.join(RVC_ROOT, "infer/modules/train/train_index.py")
 
     # === 1 数据预处理 ===
     run_step(
@@ -231,16 +231,61 @@ def main():
         "模型训练"
     )
 
-    # === 5 索引生成 ===
-    run_step(
-        TRAIN_INDEX,
-        [exp_dir, args.version],
-        "索引生成"
-    )
+    ###########################################################################
+    # 🔥 ✅ 【官方原版】生成索引（和WebUI完全一样）
+    ###########################################################################
+    logger.info("🚀 开始生成索引（官方FAISS算法）")
+    try:
+        import numpy as np
+        import faiss
+        from sklearn.cluster import MiniBatchKMeans
+
+        exp_dir_rel = f"{args.exp_name}"
+        feature_dir = os.path.join(args.log_root, exp_dir_rel, "3_feature768")
+
+        if not os.path.exists(feature_dir):
+            logger.error("❌ 特征目录不存在，请先提取特征")
+            sys.exit(1)
+
+        files = os.listdir(feature_dir)
+        if len(files) == 0:
+            logger.error("❌ 没有特征文件")
+            sys.exit(1)
+
+        npys = []
+        for name in sorted(files):
+            path = os.path.join(feature_dir, name)
+            phone = np.load(path)
+            npys.append(phone)
+
+        big_npy = np.concatenate(npys, 0)
+        np.save(os.path.join(args.log_root, exp_dir_rel, "total_fea.npy"), big_npy)
+
+        n_ivf = min(int(16 * np.sqrt(big_npy.shape[0])), big_npy.shape[0] // 39)
+        index = faiss.index_factory(768, f"IVF{n_ivf},Flat")
+        index_ivf = faiss.extract_index_ivf(index)
+        index_ivf.nprobe = 1
+        index.train(big_npy)
+
+        # 保存索引
+        faiss.write_index(
+            index,
+            os.path.join(
+                args.log_root, exp_dir_rel,
+                f"added_IVF{n_ivf}_Flat_nprobe_1_{args.exp_name}_{args.version}.index"
+            )
+        )
+
+        logger.info("✅ 索引生成完成！和 WebUI 完全一致！")
+
+    except Exception as e:
+        logger.exception("❌ 索引生成失败")
+        sys.exit(1)
 
     logger.info("============================================================")
     logger.info("🎉 训练全部完成！完全对齐 WebUI！")
     logger.info("============================================================")
+
 
 if __name__ == "__main__":
     main()
