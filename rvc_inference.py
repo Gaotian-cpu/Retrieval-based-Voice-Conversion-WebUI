@@ -4,6 +4,7 @@ import sys
 import argparse
 import logging
 import warnings
+import numpy as np
 import soundfile as sf
 
 # ###########################################################################
@@ -42,6 +43,7 @@ logger.info("✅ RVC Inference Script (Single + Batch)")
 logger.info(f"✅ RVC ROOT: {RVC_ROOT}")
 logger.info("=" * 60)
 
+
 # ###########################################################################
 # 单音频推理
 # ###########################################################################
@@ -61,10 +63,15 @@ def infer_single(
     from infer.modules.vc.modules import VC
     from configs.config import Config
 
-    # 强制设置模型路径
+    # ======================
+    # ✅ 强制设置所有环境变量
+    # ======================
     model_dir = os.path.abspath(os.path.dirname(model_path))
     model_file = os.path.basename(model_path)
+    index_dir = os.path.abspath(os.path.dirname(index_path)) if index_path else model_dir
+
     os.environ["weight_root"] = model_dir
+    os.environ["index_root"] = index_dir  # <-- 修复报错
 
     config = Config()
     vc = VC(config)
@@ -117,10 +124,12 @@ def infer_batch(
     from infer.modules.vc.modules import VC
     from configs.config import Config
 
-    # 强制设置模型路径
     model_dir = os.path.abspath(os.path.dirname(model_path))
     model_file = os.path.basename(model_path)
+    index_dir = os.path.abspath(os.path.dirname(index_path)) if index_path else model_dir
+
     os.environ["weight_root"] = model_dir
+    os.environ["index_root"] = index_dir  # <-- 修复报错
 
     config = Config()
     vc = VC(config)
@@ -156,20 +165,15 @@ def main():
     parser = argparse.ArgumentParser(description="RVC Inference (Single + Batch)")
     parser.add_argument("--model_path", required=True, type=str, help="模型路径")
 
-    # 模式
     parser.add_argument("--mode", required=True, choices=["single", "batch"])
-
-    # 单音频
     parser.add_argument("--transpose", type=int, default=0)
     parser.add_argument("--audio_path", type=str)
     parser.add_argument("--output_path", type=str)
 
-    # 批量
     parser.add_argument("--input_dir", type=str)
     parser.add_argument("--output_dir", type=str)
     parser.add_argument("--export_format", default="wav", choices=["wav", "flac", "mp3", "m4a"])
 
-    # 通用
     parser.add_argument("--index_path", default="", type=str)
     parser.add_argument("--f0_method", default="rmvpe", choices=["pm", "harvest", "crepe", "rmvpe"])
     parser.add_argument("--resample_sr", type=int, default=0)
