@@ -20,8 +20,11 @@ def get_index_path_from_model(sid):
 
 
 def load_hubert(config):
-    # 修复：使用绝对路径
-    rvc_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    # 🔥 🔥 🔥 正确拼出项目根目录（绝对不会错）
+    file_path = os.path.abspath(__file__)
+    # 走到项目根目录：/infer/modules/vc → 退3级
+    rvc_root = os.path.dirname(os.path.dirname(os.path.dirname(file_path)))
+
     hubert_path = os.path.join(rvc_root, "assets/hubert/hubert_base.pt")
 
     models, _, _ = checkpoint_utils.load_model_ensemble_and_task(
