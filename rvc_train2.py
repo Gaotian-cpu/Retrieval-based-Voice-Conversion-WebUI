@@ -52,7 +52,8 @@ def main():
     parser.add_argument("--log_root", required=True, type=str)
     parser.add_argument("--save_dir", required=True, type=str)
 
-    parser.add_argument("--f0_method", default="rmvpe", type=str)
+    parser.add_argument("--f0_method", default="rmvpe_gpu", type=str,
+                        choices=["pm", "harvest", "dio", "rmvpe", "rmvpe_gpu"])
     parser.add_argument("--num_process", default="1", type=str)
     parser.add_argument("--save_every_epoch", default=10, type=int)
     parser.add_argument("--save_every_weights", default=1, type=int)
