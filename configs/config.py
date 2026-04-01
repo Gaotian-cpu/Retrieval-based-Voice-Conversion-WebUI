@@ -100,17 +100,20 @@ class Config:
             action="store_true",
             help="torch_dml",
         )
-        cmd_opts = parser.parse_args()
+        # 🔥 🔥 🔥 核心修复：忽略未知参数
+        args, _ = parser.parse_known_args()
 
-        cmd_opts.port = cmd_opts.port if 0 <= cmd_opts.port <= 65535 else 7865
+        # 下面全部用 args，不要再次 parse_args！
+        if not (0 <= args.port <= 65535):
+            args.port = 7865
 
         return (
-            cmd_opts.pycmd,
-            cmd_opts.port,
-            cmd_opts.colab,
-            cmd_opts.noparallel,
-            cmd_opts.noautoopen,
-            cmd_opts.dml,
+            args.pycmd,
+            args.port,
+            args.colab,
+            args.noparallel,
+            args.noautoopen,
+            args.dml,
         )
 
     # has_mps is only available in nightly pytorch (for now) and MasOS 12.3+.
