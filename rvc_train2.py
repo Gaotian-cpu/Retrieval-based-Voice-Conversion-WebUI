@@ -38,7 +38,7 @@ def run_step(script_path, args, step_name):
 
 # ==================== 主流程 ====================
 def main():
-    parser = argparse.ArgumentParser(description="RVC 完整4步训练脚本（和WebUI完全一致）")
+    parser = argparse.ArgumentParser(description="RVC 完整训练脚本（和WebUI完全一致）")
 
     parser.add_argument("--exp_name", required=True, type=str)
     parser.add_argument("--dataset_dir", required=True, type=str)
@@ -61,10 +61,6 @@ def main():
     parser.add_argument("--pretrainG", default="", type=str)
     parser.add_argument("--pretrainD", default="", type=str)
 
-    parser.add_argument("--skip_process", action="store_true")
-    parser.add_argument("--skip_feature", action="store_true")
-    parser.add_argument("--skip_index", action="store_true")
-
     args = parser.parse_args()
 
     sr_num = args.sr.replace("k", "000")
@@ -75,7 +71,7 @@ def main():
     logger.info(f"📂 模型输出: {args.save_dir}\n")
 
     # ==========================
-    # ✅ 100% 按你本地真实路径写（绝对正确）
+    # 你本地真实路径（100%正确）
     # ==========================
     PREPROCESS = os.path.join(RVC_ROOT, "infer/modules/train/preprocess.py")
     EXTRACT_F0 = os.path.join(RVC_ROOT, "infer/modules/train/extract/extract_f0_print.py")
@@ -84,28 +80,32 @@ def main():
     TRAIN_INDEX = os.path.join(RVC_ROOT, "infer/modules/train/train_index.py")
 
     # === 1 数据预处理 ===
-    if not args.skip_process:
-        run_step(
-            PREPROCESS,
-            [args.dataset_dir, sr_num, args.num_process, exp_dir, "False", "0.99"],
-            "数据预处理"
-        )
+    run_step(
+        PREPROCESS,
+        [args.dataset_dir, sr_num, args.num_process, exp_dir, "False", "0.99"],
+        "数据预处理"
+    )
 
     # === 2 F0 提取 ===
-    if not args.skip_feature:
-        run_step(
-            EXTRACT_F0,
-            [exp_dir, args.num_process, args.f0_method],
-            "F0 音高提取"
-        )
+    run_step(
+        EXTRACT_F0,
+        [exp_dir, args.num_process, args.f0_method],
+        "F0 音高提取"
+    )
 
-    # === 3 Hubert 特征提取（生成 3_feature768）===
-    if not args.skip_feature:
-        run_step(
-            EXTRACT_FEATURE,
-            [exp_dir, args.num_process, "0", args.version, exp_dir],
-            "Hubert特征提取（生成 3_feature768）"
-        )
+    # === 3 ✅ 正确：6 个参数，生成 3_feature768 ===
+    run_step(
+        EXTRACT_FEATURE,
+        [
+            exp_dir,          # 1
+            args.num_process, # 2
+            "0",              # 3 device_id
+            "0",              # 4 is_half
+            args.version,     # 5 version
+            RVC_ROOT          # 6 rvc根目录（缺失的关键！）
+        ],
+        "Hubert特征提取（生成 3_feature768）"
+    )
 
     # === 4 模型训练 ===
     run_step(
@@ -131,17 +131,14 @@ def main():
     )
 
     # === 5 索引生成 ===
-    if not args.skip_index:
-        run_step(
-            TRAIN_INDEX,
-            [exp_dir, args.version],
-            "索引生成"
-        )
+    run_step(
+        TRAIN_INDEX,
+        [exp_dir, args.version],
+        "索引生成"
+    )
 
-    logger.info("")
     logger.info("============================================================")
-    logger.info("🎉 训练全部完成！和WebUI完全一致！")
-    logger.info(f"📦 模型输出: {args.save_dir}")
+    logger.info("🎉 训练全部完成！目录和WebUI完全一致！")
     logger.info("============================================================")
 
 if __name__ == "__main__":
