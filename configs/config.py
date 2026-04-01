@@ -7,6 +7,10 @@ from multiprocessing import cpu_count
 
 import torch
 
+# 🔥 修复：获取 RVC 根目录绝对路径
+CONFIG_DIR = os.path.dirname(os.path.abspath(__file__))
+RVC_ROOT = os.path.dirname(CONFIG_DIR)
+
 try:
     import intel_extension_for_pytorch as ipex  # pylint: disable=import-error, unused-import
 
@@ -63,13 +67,16 @@ class Config:
         self.x_pad, self.x_query, self.x_center, self.x_max = self.device_config()
 
     @staticmethod
-    def load_config_json() -> dict:
+    def load_config_json(self) -> dict:
         d = {}
         for config_file in version_config_list:
-            p = f"configs/inuse/{config_file}"
-            if not os.path.exists(p):
-                shutil.copy(f"configs/{config_file}", p)
-            with open(f"configs/inuse/{config_file}", "r") as f:
+            # 🔥 修复：使用绝对路径
+            src = os.path.join(RVC_ROOT, "configs", config_file)
+            dst = os.path.join(RVC_ROOT, "configs", "inuse", config_file)
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            if not os.path.exists(dst):
+                shutil.copy(src, dst)
+            with open(dst, "r") as f:
                 d[config_file] = json.load(f)
         return d
 
@@ -128,13 +135,15 @@ class Config:
     def use_fp32_config(self):
         for config_file in version_config_list:
             self.json_config[config_file]["train"]["fp16_run"] = False
-            with open(f"configs/inuse/{config_file}", "r") as f:
+            # 🔥 修复：使用绝对路径
+            p = os.path.join(RVC_ROOT, "configs", "inuse", config_file)
+            with open(p, "r") as f:
                 strr = f.read().replace("true", "false")
-            with open(f"configs/inuse/{config_file}", "w") as f:
+            with open(p, "w") as f:
                 f.write(strr)
             logger.info("overwrite " + config_file)
         self.preprocess_per = 3.0
-        logger.info("overwrite preprocess_per to %d" % (self.preprocess_per))
+        logger.info("overwrite preprocess_per to %d", self.preprocess_per)
 
     def device_config(self) -> tuple:
         if torch.cuda.is_available():
