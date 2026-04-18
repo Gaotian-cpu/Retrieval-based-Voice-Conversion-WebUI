@@ -245,16 +245,15 @@ def main():
     try:
         import numpy as np
         import faiss
-        from sklearn.cluster import MiniBatchKMeans
 
-        exp_dir_rel = f"{args.exp_name}"
+        exp_dir_rel = args.exp_name
         feature_dir = os.path.join(args.log_root, exp_dir_rel, "3_feature768")
 
         if not os.path.exists(feature_dir):
             logger.error("❌ 特征目录不存在，请先提取特征")
             sys.exit(1)
 
-        files = os.listdir(feature_dir)
+        files = [f for f in os.listdir(feature_dir) if f.endswith(".npy")]
         if len(files) == 0:
             logger.error("❌ 没有特征文件")
             sys.exit(1)
@@ -263,31 +262,61 @@ def main():
         for name in sorted(files):
             path = os.path.join(feature_dir, name)
             phone = np.load(path)
-            npys.append(phone)
+            if phone.shape[0] > 0:
+                npys.append(phone)
+            else:
+                logger.warning(f"⚠️ {name} 为空，已跳过")
 
-        big_npy = np.concatenate(npys, 0)
-        np.save(os.path.join(args.log_root, exp_dir_rel, "total_fea.npy"), big_npy)
+        if not npys:
+            logger.error("❌ 所有特征文件均为空，无法生成索引")
+            sys.exit(1)
 
-        n_ivf = min(int(16 * np.sqrt(big_npy.shape[0])), big_npy.shape[0] // 39)
-        index = faiss.index_factory(768, f"IVF{n_ivf},Flat")
-        index_ivf = faiss.extract_index_ivf(index)
-        index_ivf.nprobe = 1
-        index.train(big_npy)
+        big_npy = np.concatenate(npys, axis=0)
+        logger.info(f"总特征向量数: {big_npy.shape[0]}, 维度: {big_npy.shape[1]}")
+
+        # 保存 total_fea.npy（用于推理时的索引重建，可选）
+        total_fea_path = os.path.join(args.log_root, exp_dir_rel, "total_fea.npy")
+        np.save(total_fea_path, big_npy)
+        logger.info(f"✅ 已保存 total_fea.npy 到 {total_fea_path}")
+
+        # 创建 FAISS 索引
+        dim = big_npy.shape[1]  # 768
+        n_total = big_npy.shape[0]
+
+        if n_total >= 39:
+            n_ivf = min(int(16 * np.sqrt(n_total)), n_total // 39)
+            logger.info(f"使用 IVF{n_ivf} 索引")
+            index = faiss.index_factory(dim, f"IVF{n_ivf},Flat")
+            # 设置 nprobe（可选）
+            ivf_index = faiss.extract_index_ivf(index)
+            ivf_index.nprobe = 1
+            logger.info("训练聚类中心...")
+            index.train(big_npy)
+        else:
+            logger.info("特征向量太少，使用 Flat 索引（暴力检索）")
+            index = faiss.index_factory(dim, "Flat")
+
+        # ✅ 关键步骤：将向量添加到索引中
+        logger.info("添加向量到索引...")
+        index.add(big_npy)
+        logger.info(f"索引中的向量数: {index.ntotal}")
 
         # 保存索引
-        faiss.write_index(
-            index,
-            os.path.join(
-                args.log_root, exp_dir_rel,
-                f"added_IVF{n_ivf}_Flat_nprobe_1_{args.exp_name}_{args.version}.index"
-            )
-        )
+        index_filename = f"added_IVF{n_ivf}_Flat_nprobe_1_{args.exp_name}_{args.version}.index" if n_total >= 39 else f"added_Flat_{args.exp_name}_{args.version}.index"
+        index_path = os.path.join(args.log_root, exp_dir_rel, index_filename)
+        faiss.write_index(index, index_path)
+        logger.info(f"✅ 索引已保存到 {index_path}")
 
-        logger.info("✅ 索引生成完成！和 WebUI 完全一致！")
+        # 可选：同时将索引和 total_fea.npy 复制到模型保存目录，方便推理
+        if os.path.exists(args.save_dir):
+            import shutil
+            shutil.copy2(index_path, args.save_dir)
+            shutil.copy2(total_fea_path, args.save_dir)
+            logger.info(f"📁 已将索引和 total_fea.npy 复制到 {args.save_dir}")
 
     except Exception as e:
-        logger.exception("❌ 索引生成失败", e)
-        sys.exit(1)
+    logger.exception("❌ 索引生成失败")
+    sys.exit(1)
 
     logger.info("============================================================")
     logger.info("🎉 训练全部完成！完全对齐 WebUI！")
