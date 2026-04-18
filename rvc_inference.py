@@ -90,6 +90,12 @@ def infer_single(
     vc = VC(config)
     vc.get_vc(model_file)
 
+    # 在 infer_single 函数中，调用 vc.vc_single 之前加入
+    index_dir = os.path.dirname(index_path)
+    total_fea_path = os.path.join(index_dir, "total_fea.npy")
+    logger.info(f"Index directory: {index_dir}")
+    logger.info(f"total_fea.npy exists: {os.path.exists(total_fea_path)}")
+
     logger.info("🚀 Start single inference...")
     result_msg, out_tuple = vc.vc_single(
         sid=0,
