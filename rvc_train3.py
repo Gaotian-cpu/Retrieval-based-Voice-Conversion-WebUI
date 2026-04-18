@@ -40,6 +40,8 @@ logger = logging.getLogger("RVC-Train")
 
 # ==================== 自动识别RVC根目录 ====================
 RVC_ROOT = os.path.dirname(os.path.abspath(__file__))
+# 增加环境变量，后续脚本可以直接使用
+os.environ["RVC_ROOT"] = RVC_ROOT
 logger.info("============================================================")
 logger.info(f"✅ RVC 根目录自动识别: {RVC_ROOT}")
 logger.info("============================================================\n")

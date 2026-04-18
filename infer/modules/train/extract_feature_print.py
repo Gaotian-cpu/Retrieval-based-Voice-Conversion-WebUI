@@ -57,7 +57,17 @@ def printt(strr):
 
 
 printt(" ".join(sys.argv))
-model_path = "assets/hubert/hubert_base.pt"
+# model_path = "assets/hubert/hubert_base.pt"
+# import pathlib
+# script_dir = pathlib.Path(__file__).parent.absolute()
+# model_path = str(script_dir / "assets/hubert/hubert_base.pt")
+################# 获取hubert_base.pt的路径 ########################
+# 尝试从环境变量获取 RVC 根目录
+rvc_root = os.environ.get("RVC_ROOT")
+if rvc_root is None:
+    # 如果环境变量不存在，则基于当前脚本位置自动推断（假设标准目录结构）
+    rvc_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+model_path = os.path.join(rvc_root, "assets/hubert/hubert_base.pt")
 
 printt("exp_dir: " + exp_dir)
 wavPath = "%s/1_16k_wavs" % exp_dir
