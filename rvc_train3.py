@@ -315,8 +315,8 @@ def main():
             logger.info(f"📁 已将索引和 total_fea.npy 复制到 {args.save_dir}")
 
     except Exception as e:
-    logger.exception("❌ 索引生成失败")
-    sys.exit(1)
+        logger.exception("❌ 索引生成失败", e)
+        sys.exit(1)
 
     logger.info("============================================================")
     logger.info("🎉 训练全部完成！完全对齐 WebUI！")
