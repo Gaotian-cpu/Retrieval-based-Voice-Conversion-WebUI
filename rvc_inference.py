@@ -35,6 +35,11 @@ try:
 except:
     pass
 
+# 将 fairseq 的 Dictionary 类添加到 PyTorch 的安全全局列表
+import torch.serialization
+import fairseq.data.dictionary
+torch.serialization.add_safe_globals([fairseq.data.dictionary.Dictionary])
+
 # ###########################################################################
 # 日志
 # ###########################################################################
